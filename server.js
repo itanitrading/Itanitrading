@@ -1,120 +1,208 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 
 const app = express();
-const upload = multer({ dest: "uploads/" });
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ItaniTrading123";
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+// Deplexo's /app folder is read-only.
+// /tmp is writable during runtime.
+const UPLOAD_DIR = "/tmp/itanitrading-uploads";
 
-let products = [];
-let orders = [];
-let nextProductId = 1;
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-let adminSessions = new Set();
-
-app.post("/api/admin/login", (req, res) => {
-  const { password } = req.body;
-
-  if (password === ADMIN_PASSWORD) {
-    const token = Math.random().toString(36).slice(2);
-    adminSessions.add(token);
-
-    res.cookie = res.cookie || (() => {});
-    res.json({ success: true, token });
-  } else {
-    res.status(401).json({ success: false });
-  }
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, crypto.randomUUID() + ext);
+    }
+  })
 });
 
-function adminCheck(req, res, next) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-  if (!token || !adminSessions.has(token)) {
-    return res.status(401).json({ error: "Unauthorized" });
+app.use("/uploads", express.static(UPLOAD_DIR));
+
+app.use(express.static(__dirname));
+
+const products = [];
+const orders = [];
+const sessions = new Set();
+
+function requireAdmin(req, res, next) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.substring(7)
+    : "";
+
+  if (!sessions.has(token)) {
+    return res.status(401).json({
+      error: "Unauthorized"
+    });
   }
 
   next();
 }
 
-app.get("/api/admin/me", (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  res.json({ admin: !!token && adminSessions.has(token) });
-});
+// ==================== ADMIN LOGIN ====================
 
-app.post("/api/admin/logout", (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+app.post("/api/admin/login", (req, res) => {
+  const { password } = req.body;
 
-  if (token) {
-    adminSessions.delete(token);
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({
+      error: "Wrong password"
+    });
   }
 
-  res.json({ success: true });
+  const token = crypto.randomBytes(32).toString("hex");
+  sessions.add(token);
+
+  res.json({
+    success: true,
+    token
+  });
 });
+
+app.get("/api/admin/me", requireAdmin, (req, res) => {
+  res.json({
+    loggedIn: true
+  });
+});
+
+app.post("/api/admin/logout", requireAdmin, (req, res) => {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.substring(7)
+    : "";
+
+  sessions.delete(token);
+
+  res.json({
+    success: true
+  });
+});
+
+// ==================== PRODUCTS ====================
 
 app.get("/api/products", (req, res) => {
   res.json(products);
 });
 
-app.post("/api/products", adminCheck, upload.single("file"), (req, res) => {
+app.post("/api/products", requireAdmin, upload.single("image"), (req, res) => {
+  const { name, price, available } = req.body;
+
+  if (!name || price === undefined) {
+    return res.status(400).json({
+      error: "Product name and price are required"
+    });
+  }
+
   const product = {
-    id: nextProductId++,
-    name: req.body.name,
-    price: Number(req.body.price),
-    photo: req.body.photo || "",
-    isAvailable: true
+    id: crypto.randomUUID(),
+    name,
+    price: Number(price),
+    available: available !== "false",
+    image: req.file
+      ? `/uploads/${req.file.filename}`
+      : "",
+    createdAt: new Date().toISOString()
   };
 
   products.push(product);
+
   res.json(product);
 });
 
-app.patch("/api/products/:id", adminCheck, (req, res) => {
-  const product = products.find(p => p.id == req.params.id);
+app.patch("/api/products/:id", requireAdmin, upload.single("image"), (req, res) => {
+  const product = products.find(p => p.id === req.params.id);
 
   if (!product) {
-    return res.status(404).json({ error: "Product not found" });
+    return res.status(404).json({
+      error: "Product not found"
+    });
+  }
+
+  if (req.body.name !== undefined) {
+    product.name = req.body.name;
   }
 
   if (req.body.price !== undefined) {
     product.price = Number(req.body.price);
   }
 
-  if (req.body.isAvailable !== undefined) {
-    product.isAvailable = Boolean(req.body.isAvailable);
+  if (req.body.available !== undefined) {
+    product.available =
+      req.body.available === true ||
+      req.body.available === "true";
+  }
+
+  if (req.file) {
+    product.image = `/uploads/${req.file.filename}`;
   }
 
   res.json(product);
 });
 
-app.delete("/api/products/:id", adminCheck, (req, res) => {
-  products = products.filter(p => p.id != req.params.id);
-  res.json({ success: true });
+app.delete("/api/products/:id", requireAdmin, (req, res) => {
+  const index = products.findIndex(p => p.id === req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({
+      error: "Product not found"
+    });
+  }
+
+  products.splice(index, 1);
+
+  res.json({
+    success: true
+  });
 });
 
-app.get("/api/orders", adminCheck, (req, res) => {
+// ==================== ORDERS ====================
+
+app.get("/api/orders", requireAdmin, (req, res) => {
   res.json(orders);
 });
 
 app.post("/api/orders", (req, res) => {
+  const { customer, phone, address, items, total } = req.body;
+
+  if (!customer || !items || !items.length) {
+    return res.status(400).json({
+      error: "Customer and order items are required"
+    });
+  }
+
   const order = {
-    id: Date.now(),
-    customer: req.body.customer,
-    phone: req.body.phone,
-    products: req.body.products || [],
-    total: Number(req.body.total || 0),
-    notes: req.body.notes || "",
+    id: crypto.randomUUID(),
+    customer,
+    phone: phone || "",
+    address: address || "",
+    items,
+    total: Number(total || 0),
     createdAt: new Date().toISOString()
   };
 
   orders.push(order);
-  res.json({ success: true, order });
+
+  res.json({
+    success: true,
+    order
+  });
 });
+
+// ==================== PAGES ====================
 
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
@@ -124,6 +212,8 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(PORT, () => {
+// ==================== START SERVER ====================
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`ItaniTrading running on port ${PORT}`);
 });
