@@ -1,0 +1,405 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ItaniTrading Admin</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#f3f4f6;color:#111827}
+.wrap{max-width:1100px;margin:auto;padding:20px}
+.box{background:white;padding:18px;border-radius:14px;margin-bottom:18px;box-shadow:0 2px 8px #0001}
+input,button,textarea{padding:10px;border-radius:8px;border:1px solid #ddd;margin:4px}
+button{cursor:pointer}
+.primary{background:#111827;color:white}
+.green{background:#25D366;color:white}
+.red{background:#ef4444;color:white}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.product{border:1px solid #ddd;padding:12px;border-radius:10px}
+.product img{width:100%;height:140px;object-fit:cover;border-radius:8px}
+.order{border:1px solid #ddd;padding:12px;border-radius:10px;margin:10px 0}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+<div id="login" class="box">
+<h1>🔐 ItaniTrading Admin</h1>
+<p>This page is private.</p>
+
+<input id="password" type="password" placeholder="Admin password">
+<button class="primary" onclick="login()">Login</button>
+
+<p id="loginMsg"></p>
+</div>
+
+<div id="app" style="display:none">
+
+<div class="box">
+<button class="red" onclick="logout()">Logout</button>
+<h1>📦 ItaniTrading Admin Dashboard</h1>
+<p>Manage products and view customer orders.</p>
+</div>
+
+<div class="box">
+<h2>➕ Add Product</h2>
+
+<form id="form">
+
+<input name="name" placeholder="Product name" required>
+
+<input name="price"
+type="number"
+step="0.01"
+placeholder="Price"
+required>
+
+<input name="photo"
+placeholder="Photo URL (optional)">
+
+<input name="file"
+type="file"
+accept="image/*">
+
+<button class="green">Add Product</button>
+
+</form>
+</div>
+
+<div class="box">
+<h2>🛒 Products</h2>
+<div id="products" class="grid"></div>
+</div>
+
+<div class="box">
+<h2>🔔 Customer Orders</h2>
+<div id="orders"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+let token = localStorage.getItem("itanitrading_admin_token");
+
+async function check(){
+
+try{
+
+let r = await fetch("/api/admin/me",{
+headers:{
+"Authorization":"Bearer "+token
+}
+});
+
+let x = await r.json();
+
+if(x.admin){
+
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";
+
+loadProducts();
+loadOrders();
+
+}else{
+
+localStorage.removeItem("itanitrading_admin_token");
+
+document.getElementById("login").style.display="block";
+document.getElementById("app").style.display="none";
+
+}
+
+}catch(e){
+
+document.getElementById("loginMsg").textContent="Server connection error.";
+
+}
+
+}
+
+async function login(){
+
+let password=document.getElementById("password").value;
+
+let r=await fetch("/api/admin/login",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+password:password
+})
+
+});
+
+if(r.ok){
+
+let x=await r.json();
+
+localStorage.setItem(
+"itanitrading_admin_token",
+x.token
+);
+
+check();
+
+}else{
+
+document.getElementById("loginMsg").textContent="Wrong password.";
+
+}
+
+}
+
+async function logout(){
+
+await fetch("/api/admin/logout",{
+
+method:"POST",
+
+headers:{
+"Authorization":"Bearer "+token
+}
+
+});
+
+localStorage.removeItem("itanitrading_admin_token");
+
+location.reload();
+
+}
+
+async function loadProducts(){
+
+let r=await fetch("/api/products");
+
+let ps=await r.json();
+
+document.getElementById("products").innerHTML=
+
+ps.map(p=>`
+
+<div class="product">
+
+<img src="${p.photo||''}">
+
+<b>${esc(p.name)}</b>
+
+<p>
+Price:
+$<input
+style="width:80px"
+id="price${p.id}"
+value="${p.price}">
+</p>
+
+<button class="green"
+onclick="save(${p.id})">
+Save
+</button>
+
+<button onclick="toggle(${p.id},${p.isAvailable})">
+
+${p.isAvailable?'🟢 Available':'🔴 Sold Out'}
+
+</button>
+
+<button class="red"
+onclick="del(${p.id})">
+Delete
+</button>
+
+</div>
+
+`).join("");
+
+}
+
+async function save(id){
+
+await fetch("/api/products/"+id,{
+
+method:"PATCH",
+
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+token
+},
+
+body:JSON.stringify({
+
+price:Number(
+document.getElementById("price"+id).value
+)
+
+})
+
+});
+
+loadProducts();
+
+}
+
+async function toggle(id,status){
+
+await fetch("/api/products/"+id,{
+
+method:"PATCH",
+
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+token
+},
+
+body:JSON.stringify({
+
+isAvailable:!status
+
+})
+
+});
+
+loadProducts();
+
+}
+
+async function del(id){
+
+if(!confirm("Delete this product?")) return;
+
+await fetch("/api/products/"+id,{
+
+method:"DELETE",
+
+headers:{
+"Authorization":"Bearer "+token
+}
+
+});
+
+loadProducts();
+
+}
+
+document.getElementById("form").onsubmit=async e=>{
+
+e.preventDefault();
+
+let fd=new FormData(e.target);
+
+await fetch("/api/products",{
+
+method:"POST",
+
+headers:{
+"Authorization":"Bearer "+token
+},
+
+body:fd
+
+});
+
+e.target.reset();
+
+loadProducts();
+
+};
+
+async function loadOrders(){
+
+let r=await fetch("/api/orders",{
+
+headers:{
+"Authorization":"Bearer "+token
+}
+
+});
+
+if(!r.ok) return;
+
+let os=await r.json();
+
+document.getElementById("orders").innerHTML=
+
+os.length?
+
+os.map(o=>`
+
+<div class="order">
+
+<b>👤 ${esc(o.customer)}</b>
+—
+${esc(o.phone)}
+
+<br>
+
+<small>
+${new Date(o.createdAt).toLocaleString()}
+</small>
+
+<ul>
+
+${o.products.map(p=>`
+
+<li>
+${esc(p.name)}
+x${p.quantity}
+—
+$${(p.price*p.quantity).toFixed(2)}
+</li>
+
+`).join("")}
+
+</ul>
+
+<b>
+Total: $${Number(o.total).toFixed(2)}
+</b>
+
+<p>
+📝 ${esc(o.notes||"No notes")}
+</p>
+
+</div>
+
+`).join("")
+
+:
+
+"No orders yet.";
+
+}
+
+function esc(s){
+
+return String(s).replace(
+/[&<>"']/g,
+
+m=>({
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#039;"
+}[m])
+
+);
+
+}
+
+check();
+
+setInterval(loadOrders,10000);
+
+</script>
+
+</body>
+  </html>
