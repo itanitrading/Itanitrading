@@ -124,40 +124,52 @@ document.getElementById("loginMsg").textContent="Server connection error.";
 
 async function login(){
 
-let password=document.getElementById("password").value;
+  const password = document.getElementById("password").value;
+  const msg = document.getElementById("loginMsg");
 
-let r=await fetch("/api/admin/login",{
+  try {
 
-method:"POST",
+    const r = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        password: password
+      })
+    });
 
-headers:{
-"Content-Type":"application/json"
-},
+    const text = await r.text();
 
-body:JSON.stringify({
-password:password
-})
+    if (!r.ok) {
+      msg.textContent = "Login failed: " + text;
+      return;
+    }
 
-});
+    const x = JSON.parse(text);
 
-if(r.ok){
+    if (!x.token) {
+      msg.textContent = "No login token received.";
+      return;
+    }
 
-let x=await r.json();
+    localStorage.setItem(
+      "itanitrading_admin_token",
+      x.token
+    );
 
-localStorage.setItem(
-"itanitrading_admin_token",
-x.token
-);
+    token = x.token;
 
-check();
+    await check();
 
-}else{
+  } catch (e) {
 
-document.getElementById("loginMsg").textContent="Wrong password.";
+    msg.textContent = "Connection error: " + e.message;
+
+  }
 
 }
-
-}
+  
 
 async function logout(){
 
