@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html>
 <head>
@@ -18,6 +19,7 @@ button{cursor:pointer}
 .product{border:1px solid #ddd;padding:12px;border-radius:10px}
 .product img{width:100%;height:140px;object-fit:cover;border-radius:8px}
 .order{border:1px solid #ddd;padding:12px;border-radius:10px;margin:10px 0}
+.status{font-weight:bold;margin:8px 0}
 </style>
 </head>
 
@@ -35,6 +37,7 @@ button{cursor:pointer}
 <p id="loginMsg"></p>
 </div>
 
+
 <div id="app" style="display:none">
 
 <div class="box">
@@ -43,6 +46,7 @@ button{cursor:pointer}
 <p>Manage products and view customer orders.</p>
 </div>
 
+
 <div class="box">
 <h2>➕ Add Product</h2>
 
@@ -50,28 +54,48 @@ button{cursor:pointer}
 
 <input name="name" placeholder="Product name" required>
 
-<input name="price"
+<input
+name="price"
 type="number"
 step="0.01"
 placeholder="Price"
 required>
 
-<input name="photo"
-placeholder="Photo URL (optional)">
-
-<input name="file"
+<label>
+<br>
+Product picture:
+<br>
+<input
+name="image"
 type="file"
 accept="image/*">
+</label>
 
-<button class="green">Add Product</button>
+<br>
+
+<label>
+<input
+name="available"
+type="checkbox"
+checked>
+Available
+</label>
+
+<br>
+
+<button class="green" type="submit">
+Add Product
+</button>
 
 </form>
 </div>
+
 
 <div class="box">
 <h2>🛒 Products</h2>
 <div id="products" class="grid"></div>
 </div>
+
 
 <div class="box">
 <h2>🔔 Customer Orders</h2>
@@ -81,9 +105,11 @@ accept="image/*">
 </div>
 </div>
 
+
 <script>
 
 let token = localStorage.getItem("itanitrading_admin_token");
+
 
 async function check(){
 
@@ -95,6 +121,8 @@ headers:{
 }
 });
 
+if(r.ok){
+
 let x = await r.json();
 
 if(x.loggedIn){
@@ -105,14 +133,15 @@ document.getElementById("app").style.display="block";
 loadProducts();
 loadOrders();
 
-}else{
+return;
+
+}
+}
 
 localStorage.removeItem("itanitrading_admin_token");
 
 document.getElementById("login").style.display="block";
 document.getElementById("app").style.display="none";
-
-}
 
 }catch(e){
 
@@ -122,65 +151,48 @@ document.getElementById("loginMsg").textContent="Server connection error.";
 
 }
 
+
 async function login(){
 
-  const password = document.getElementById("password").value;
-  const msg = document.getElementById("loginMsg");
+let password=document.getElementById("password").value;
 
-  try {
+let r=await fetch("/api/admin/login",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+password:password
+})
+});
 
-    const r = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        password: password
-      })
-    });
+if(r.ok){
 
-    const text = await r.text();
+let x=await r.json();
 
-    if (!r.ok) {
-      msg.textContent = "Login failed: " + text;
-      return;
-    }
+localStorage.setItem(
+"itanitrading_admin_token",
+x.token
+);
 
-    const x = JSON.parse(text);
+check();
 
-    if (!x.token) {
-      msg.textContent = "No login token received.";
-      return;
-    }
+}else{
 
-    localStorage.setItem(
-      "itanitrading_admin_token",
-      x.token
-    );
-
-    token = x.token;
-
-    await check();
-
-  } catch (e) {
-
-    msg.textContent = "Connection error: " + e.message;
-
-  }
+document.getElementById("loginMsg").textContent="Wrong password.";
 
 }
-  
+
+}
+
 
 async function logout(){
 
 await fetch("/api/admin/logout",{
-
 method:"POST",
-
 headers:{
 "Authorization":"Bearer "+token
 }
-
 });
 
 localStorage.removeItem("itanitrading_admin_token");
@@ -189,11 +201,23 @@ location.reload();
 
 }
 
+
+/* ================= PRODUCTS ================= */
+
 async function loadProducts(){
 
 let r=await fetch("/api/products");
 
 let ps=await r.json();
+
+if(!ps.length){
+
+document.getElementById("products").innerHTML=
+"<p>No products yet.</p>";
+
+return;
+
+}
 
 document.getElementById("products").innerHTML=
 
@@ -201,7 +225,17 @@ ps.map(p=>`
 
 <div class="product">
 
-<img src="${p.photo||''}">
+${
+p.image
+?
+`<img src="${p.image}" alt="${esc(p.name)}">`
+:
+`<div style="height:140px;background:#eee;display:flex;align-items:center;justify-content:center;border-radius:8px">
+No picture
+</div>`
+}
+
+<br>
 
 <b>${esc(p.name)}</b>
 
@@ -209,24 +243,29 @@ ps.map(p=>`
 Price:
 $<input
 style="width:80px"
-id="price${p.id}"
+id="price-${p.id}"
 value="${p.price}">
 </p>
 
-<button class="green"
-onclick="save(${p.id})">
-Save
+<p class="status">
+${p.available ? "🟢 Available" : "🔴 Sold Out"}
+</p>
+
+<button
+class="green"
+onclick="save('${p.id}')">
+Save Price
 </button>
 
-<button onclick="toggle(${p.id},${p.isAvailable})">
-
-${p.isAvailable?'🟢 Available':'🔴 Sold Out'}
-
+<button
+onclick="toggle('${p.id}', ${p.available})">
+${p.available ? "🔴 Mark Sold Out" : "🟢 Mark Available"}
 </button>
 
-<button class="red"
-onclick="del(${p.id})">
-Delete
+<button
+class="red"
+onclick="del('${p.id}')">
+🗑️ Delete
 </button>
 
 </div>
@@ -235,9 +274,14 @@ Delete
 
 }
 
+
+/* ================= SAVE PRICE ================= */
+
 async function save(id){
 
-await fetch("/api/products/"+id,{
+let price=document.getElementById("price-"+id).value;
+
+let r=await fetch("/api/products/"+id,{
 
 method:"PATCH",
 
@@ -247,22 +291,29 @@ headers:{
 },
 
 body:JSON.stringify({
-
-price:Number(
-document.getElementById("price"+id).value
-)
-
+price:Number(price)
 })
 
 });
 
+if(!r.ok){
+
+alert("Could not save the price.");
+
+return;
+
+}
+
 loadProducts();
 
 }
+
+
+/* ================= AVAILABLE / SOLD OUT ================= */
 
 async function toggle(id,status){
 
-await fetch("/api/products/"+id,{
+let r=await fetch("/api/products/"+id,{
 
 method:"PATCH",
 
@@ -272,22 +323,31 @@ headers:{
 },
 
 body:JSON.stringify({
-
-isAvailable:!status
-
+available:!status
 })
 
 });
 
+if(!r.ok){
+
+alert("Could not change product availability.");
+
+return;
+
+}
+
 loadProducts();
 
 }
+
+
+/* ================= DELETE ================= */
 
 async function del(id){
 
 if(!confirm("Delete this product?")) return;
 
-await fetch("/api/products/"+id,{
+let r=await fetch("/api/products/"+id,{
 
 method:"DELETE",
 
@@ -297,9 +357,20 @@ headers:{
 
 });
 
+if(!r.ok){
+
+alert("Could not delete product.");
+
+return;
+
+}
+
 loadProducts();
 
 }
+
+
+/* ================= ADD PRODUCT ================= */
 
 document.getElementById("form").onsubmit=async e=>{
 
@@ -307,7 +378,18 @@ e.preventDefault();
 
 let fd=new FormData(e.target);
 
-await fetch("/api/products",{
+/*
+The checkbox sends "on" when checked.
+The server expects anything except "false"
+to mean available.
+*/
+
+fd.set(
+"available",
+e.target.available.checked ? "true" : "false"
+);
+
+let r=await fetch("/api/products",{
 
 method:"POST",
 
@@ -319,11 +401,26 @@ body:fd
 
 });
 
+if(!r.ok){
+
+let error=await r.json().catch(()=>({}));
+
+alert(error.error || "Could not add product.");
+
+return;
+
+}
+
 e.target.reset();
+
+e.target.available.checked=true;
 
 loadProducts();
 
 };
+
+
+/* ================= ORDERS ================= */
 
 async function loadOrders(){
 
@@ -348,8 +445,10 @@ os.map(o=>`
 <div class="order">
 
 <b>👤 ${esc(o.customer)}</b>
+
 —
-${esc(o.phone)}
+
+${esc(o.phone || "")}
 
 <br>
 
@@ -359,16 +458,18 @@ ${new Date(o.createdAt).toLocaleString()}
 
 <ul>
 
-${o.products.map(p=>`
+${
+(o.items || o.products || []).map(p=>`
 
 <li>
 ${esc(p.name)}
 x${p.quantity}
 —
-$${(p.price*p.quantity).toFixed(2)}
+$${(Number(p.price)*Number(p.quantity)).toFixed(2)}
 </li>
 
-`).join("")}
+`).join("")
+}
 
 </ul>
 
@@ -377,7 +478,7 @@ Total: $${Number(o.total).toFixed(2)}
 </b>
 
 <p>
-📝 ${esc(o.notes||"No notes")}
+📝 ${esc(o.notes || "No notes")}
 </p>
 
 </div>
@@ -390,11 +491,13 @@ Total: $${Number(o.total).toFixed(2)}
 
 }
 
+
+/* ================= SECURITY ================= */
+
 function esc(s){
 
 return String(s).replace(
 /[&<>"']/g,
-
 m=>({
 "&":"&amp;",
 "<":"&lt;",
@@ -402,10 +505,10 @@ m=>({
 '"':"&quot;",
 "'":"&#039;"
 }[m])
-
 );
 
 }
+
 
 check();
 
@@ -414,4 +517,6 @@ setInterval(loadOrders,10000);
 </script>
 
 </body>
-  </html>
+</html>
+```
+
