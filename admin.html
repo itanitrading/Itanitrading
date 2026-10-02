@@ -31,7 +31,8 @@ button{cursor:pointer}
 <p>This page is private.</p>
 
 <input id="password" type="password" placeholder="Admin password">
-<button class="primary" onclick="login()">Login</button>
+<button type="button" class="primary" id="loginButton">Login</button>
+  
 
 <p id="loginMsg"></p>
 </div>
@@ -153,36 +154,44 @@ document.getElementById("loginMsg").textContent="Server connection error.";
 
 async function login(){
 
-let password=document.getElementById("password").value;
+    const password = document.getElementById("password").value;
+    const msg = document.getElementById("loginMsg");
 
-let r=await fetch("/api/admin/login",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-password:password
-})
-});
+    msg.textContent = "Logging in...";
 
-if(r.ok){
+    try {
 
-let x=await r.json();
+        const r = await fetch("/api/admin/login", {
+            method: "POST",
+        headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                password: password
+            })
+        });
 
-localStorage.setItem(
-"itanitrading_admin_token",
-x.token
-);
+        const x = await r.json();
 
-check();
+        if (!r.ok) {
+            msg.textContent = x.error || "Login failed.";
+            return;
+        }
 
-}else{
+        localStorage.setItem(
+            "itanitrading_admin_token",
+            x.token
+        );
 
-document.getElementById("loginMsg").textContent="Wrong password.";
+        window.location.href = "/admin";
 
-}
+    } catch (e) {
 
-}
+        msg.textContent = "Server connection error.";
+
+    }
+  }
+  
 
 
 async function logout(){
@@ -509,11 +518,9 @@ m=>({
 }
 
 
+document.getElementById("loginButton").onclick = login;
+
 check();
 
 setInterval(loadOrders,10000);
-
-</script>
-
-</body>
-</html>
+  
