@@ -112,7 +112,7 @@ app.post("/api/products", requireAdmin, upload.single("image"), (req, res) => {
     name,
     price: Number(price),
     available: available !== "false",
-    image: req.image
+    image: req.file
       ? `/uploads/${req.image.filename}`
       : "",
     createdAt: new Date().toISOString()
@@ -146,8 +146,8 @@ app.patch("/api/products/:id", requireAdmin, upload.single("image"), (req, res) 
       req.body.available === "true";
   }
 
-  if (req.image) {
-    product.image = `/uploads/${req.image.filename}`;
+  if (req.file) {
+    product.image = `/uploads/${req.file.filename}`;
   }
 
   res.json(product);
