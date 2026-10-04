@@ -18,22 +18,366 @@ input,textarea{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:9p
 <input id="customer" placeholder="Your name"><input id="phone" placeholder="Phone number"><textarea id="notes" placeholder="Notes (optional)"></textarea>
 <button class="checkout" onclick="placeOrder()">📲 Place Order on WhatsApp</button><p id="status"></p></aside>
 <script>
-let products=[],cart=[];
-async function load(){products=await (await fetch('/api/products')).json();render();}
-function render(){document.getElementById('products').innerHTML=products.map(p=>`
-<div class="card"><img class="pic" src="${p.photo||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23eee%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23999%22%3ENo image%3C/text%3E%3C/svg%3E'}"><h3>${esc(p.name)}</h3><div class="price">$${Number(p.price).toFixed(2)}</div>${p.isAvailable?`<button class="add" onclick="add(${p.id})">Add to Order</button>`:`<div class="sold">🔴 Sold Out</div>`}</div>`).join('');renderCart();}
-function add(id){let p=products.find(x=>x.id===id);if(!p||!p.isAvailable)return;let x=cart.find(x=>x.id===id);x?x.quantity++:cart.push({...p,quantity:1});renderCart();}
-function change(id,d){let x=cart.find(x=>x.id===id);if(!x)return;x.quantity+=d;if(x.quantity<=0)cart=cart.filter(x=>x.id!==id);renderCart();}
-function renderCart(){document.getElementById('count').textContent=cart.reduce((s,x)=>s+x.quantity,0);let total=cart.reduce((s,x)=>s+x.price*x.quantity,0);document.getElementById('total').textContent=total.toFixed(2);document.getElementById('cartItems').innerHTML=cart.length?cart.map(x=>`<div style="padding:10px 0;border-bottom:1px solid #eee"><b>${esc(x.name)}</b><div class="qty"><button onclick="change(${x.id},-1)">−</button> ${x.quantity} <button onclick="change(${x.id},1)">+</button> — $${(x.price*x.quantity).toFixed(2)}</div></div>`).join(''):'Your cart is empty.';}
-function toggleCart(){document.getElementById('cart').classList.toggle('open')}
-async function placeOrder(){
- if(!cart.length)return alert('Add products first.');let customer=document.getElementById('customer').value.trim(),phone=document.getElementById('phone').value.trim(),notes=document.getElementById('notes').value.trim();
- if(!customer||!phone)return alert('Please enter your name and phone number.');
- let total=cart.reduce((s,x)=>s+x.price*x.quantity,0);
- let r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer,phone,products:cart.map(x=>({name:x.name,quantity:x.quantity,price:x.price})),total,notes})});
- let data=await r.json();if(!r.ok)return alert(data.error||'Could not place order');
- let msg=`📦 *New Order - ItaniTrading*%0A%0A👤 *Customer:* ${encodeURIComponent(customer)}%0A📞 *Phone:* ${encodeURIComponent(phone)}%0A%0A*Products:*%0A`+cart.map(x=>`• ${encodeURIComponent(x.name)} x${x.quantity} - $${(x.price*x.quantity).toFixed(2)}`).join('%0A')+`%0A%0A💰 *Total:* $${total.toFixed(2)}${notes?`%0A📝 *Notes:* ${encodeURIComponent(notes)}`:''}`;
- window.open(`https://wa.me/${data.whatsappNumber}?text=${msg}`,'_blank');cart=[];renderCart();document.getElementById('status').textContent='Order saved successfully.';}
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+
+let products = [];
+let cart = [];
+
+async function load() {
+    try {
+        const r = await fetch("/api/products");
+        products = await r.json();
+        render();
+    } catch (e) {
+        document.getElementById("products").innerHTML =
+            "<p>Could not load products.</p>";
+    }
+}
+
+
+function render() {
+
+    document.getElementById("products").innerHTML =
+        products.map(p => `
+
+            <div class="card">
+
+                ${
+                    p.image
+                    ?
+                    `<img class="pic"
+                         src="${p.image}"
+                         alt="${esc(p.name)}">`
+                    :
+                    `<div class="pic"
+                         style="display:flex;
+                                align-items:center;
+                                justify-content:center;">
+                        No image
+                    </div>`
+                }
+
+                <h3>${esc(p.name)}</h3>
+
+                <div class="price">
+                    $${Number(p.price).toFixed(2)}
+                </div>
+
+                ${
+                    p.available
+                    ?
+                    `<button
+                        class="add"
+                        onclick="add('${p.id}')">
+                        Add to Order
+                    </button>`
+                    :
+                    `<div class="sold">
+                        🔴 Sold Out
+                    </div>`
+                }
+
+            </div>
+
+        `).join("");
+
+    renderCart();
+}
+
+
+function add(id) {
+
+    const p = products.find(x => String(x.id) === String(id));
+
+    if (!p || !p.available) return;
+
+    const x = cart.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (x) {
+        x.quantity++;
+    } else {
+        cart.push({
+            ...p,
+            quantity: 1
+        });
+    }
+
+    renderCart();
+    toggleCart();
+}
+
+
+function change(id, d) {
+
+    const x = cart.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!x) return;
+
+    x.quantity += d;
+
+    if (x.quantity <= 0) {
+        cart = cart.filter(
+            x => String(x.id) !== String(id)
+        );
+    }
+
+    renderCart();
+}
+
+
+function renderCart() {
+
+    const count =
+        cart.reduce(
+            (s, x) => s + x.quantity,
+            0
+        );
+
+    document.getElementById("count").textContent =
+        count;
+
+
+    const total =
+        cart.reduce(
+            (s, x) =>
+                s + Number(x.price) * x.quantity,
+            0
+        );
+
+    document.getElementById("total").textContent =
+        total.toFixed(2);
+
+
+    document.getElementById("cartItems").innerHTML =
+        cart.length
+
+        ?
+
+        cart.map(x => `
+
+            <div style="
+                padding:10px 0;
+                border-bottom:1px solid #eee
+            ">
+
+                <b>${esc(x.name)}</b>
+
+                <div class="qty">
+
+                    <button
+                        onclick="change('${x.id}',-1)">
+                        −
+                    </button>
+
+                    ${x.quantity}
+
+                    <button
+                        onclick="change('${x.id}',1)">
+                        +
+                    </button>
+
+                    —
+                    $${(
+                        Number(x.price) *
+                        x.quantity
+                    ).toFixed(2)}
+
+                </div>
+
+            </div>
+
+        `).join("")
+
+        :
+
+        "Your cart is empty.";
+}
+
+
+function toggleCart() {
+
+    document
+        .getElementById("cart")
+        .classList
+        .toggle("open");
+}
+
+
+async function placeOrder() {
+
+    if (!cart.length) {
+        alert("Add products first.");
+        return;
+    }
+
+
+    const customer =
+        document
+            .getElementById("customer")
+            .value
+            .trim();
+
+    const phone =
+        document
+            .getElementById("phone")
+            .value
+            .trim();
+
+    const notes =
+        document
+            .getElementById("notes")
+            .value
+            .trim();
+
+
+    if (!customer || !phone) {
+
+        alert(
+            "Please enter your name and phone number."
+        );
+
+        return;
+    }
+
+
+    const total =
+        cart.reduce(
+            (s, x) =>
+                s +
+                Number(x.price) *
+                x.quantity,
+            0
+        );
+
+
+    try {
+
+        const r = await fetch("/api/orders", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                customer: customer,
+
+                phone: phone,
+
+                products: cart.map(x => ({
+
+                    name: x.name,
+
+                    quantity: x.quantity,
+
+                    price: Number(x.price)
+
+                })),
+
+                total: total,
+
+                notes: notes
+
+            })
+
+        });
+
+
+        const data = await r.json();
+
+
+        if (!r.ok) {
+
+            alert(
+                data.error ||
+                "Could not place order."
+            );
+
+            return;
+        }
+
+
+        const msg =
+            `📦 *New Order - ItaniTrading*%0A%0A` +
+
+            `👤 *Customer:* ` +
+            encodeURIComponent(customer) +
+
+            `%0A📞 *Phone:* ` +
+            encodeURIComponent(phone) +
+
+            `%0A%0A*Products:*%0A` +
+
+            cart.map(x =>
+                `• ${encodeURIComponent(x.name)} ` +
+                `x${x.quantity} - $` +
+                (
+                    Number(x.price) *
+                    x.quantity
+                ).toFixed(2)
+            ).join("%0A") +
+
+            `%0A%0A💰 *Total:* $` +
+            total.toFixed(2) +
+
+            (
+                notes
+                ?
+                `%0A📝 *Notes:* ` +
+                encodeURIComponent(notes)
+                :
+                ""
+            );
+
+
+        if (data.whatsappNumber) {
+
+            window.open(
+                `https://wa.me/${data.whatsappNumber}?text=${msg}`,
+                "_blank"
+            );
+
+        }
+
+
+        cart = [];
+
+        renderCart();
+
+        document.getElementById("status").textContent =
+            "Order saved successfully.";
+
+
+    } catch (e) {
+
+        alert(
+            "Could not connect to the server."
+        );
+    }
+}
+
+
+function esc(s) {
+
+    return String(s).replace(
+        /[&<>"']/g,
+
+        m => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[m])
+    );
+}
+
+
 load();
-</script></body></html>
+
+</script>
