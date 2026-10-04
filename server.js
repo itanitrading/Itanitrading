@@ -14,7 +14,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ItaniTrading123";
 const UPLOAD_DIR = "/tmp/itanitrading-uploads";
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
+app.use("uploads", express.static(UPLOAD_DIR));
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
