@@ -1,203 +1,537 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#25D366"><link rel="manifest" href="/manifest.json"><title>ItaniTrading</title>
+  <!doctype html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<meta name="theme-color"
+      content="#25D366">
+
+<link rel="manifest"
+      href="/manifest.json">
+
+<title>ItaniTrading</title>
+
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f7f8;color:#111827}
-header{background:#111827;color:white;padding:16px;position:sticky;top:0;z-index:5}.head{max-width:1100px;margin:auto;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:25px;font-weight:800}.cartbtn{background:#25D366;border:0;color:white;padding:11px 15px;border-radius:10px;font-weight:700}
-main{max-width:1100px;margin:20px auto;padding:0 14px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:15px}
-.card{background:white;border-radius:14px;padding:12px;box-shadow:0 2px 10px #00000012}.pic{width:100%;height:160px;object-fit:cover;border-radius:10px;background:#eee}
-.price{font-size:20px;font-weight:800;margin:8px 0}.sold{color:#6b7280;font-weight:700}.add{width:100%;border:0;background:#111827;color:white;padding:10px;border-radius:9px;font-weight:700}.add:disabled{background:#aaa}
-.cart{position:fixed;right:0;top:0;width:min(420px,100%);height:100%;background:white;z-index:20;box-shadow:-5px 0 20px #0003;padding:20px;overflow:auto;transform:translateX(100%);transition:.2s}.cart.open{transform:translateX(0)}
-input,textarea{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:9px;margin:5px 0 10px}.close{float:right;border:0;background:#eee;border-radius:8px;padding:8px}.checkout{background:#25D366;color:white;border:0;width:100%;padding:13px;border-radius:10px;font-weight:800}
-.qty button{padding:3px 9px;border:1px solid #ddd;background:#fff;border-radius:5px}
-</style></head><body>
-<header><div class="head"><div class="logo">ItaniTrading</div><button class="cartbtn" onclick="toggleCart()">🛒 Cart (<span id="count">0</span>)</button></div></header>
-<main><h1>Order from ItaniTrading</h1><p>Choose your products and send your order.</p><div id="products" class="grid"></div></main>
-<aside id="cart" class="cart"><button class="close" onclick="toggleCart()">✕</button><h2>Your Order</h2><div id="cartItems"></div><h3>Total: $<span id="total">0.00</span></h3>
-<input id="customer" placeholder="Your name"><input id="phone" placeholder="Phone number"><textarea id="notes" placeholder="Notes (optional)"></textarea>
-<button class="checkout" onclick="placeOrder()">📲 Place Order on WhatsApp</button><p id="status"></p></aside>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f5f7f8;
+    color:#111827;
+}
+
+header{
+    background:#111827;
+    color:white;
+    padding:16px;
+    position:sticky;
+    top:0;
+    z-index:5;
+}
+
+.head{
+    max-width:1100px;
+    margin:auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo{
+    font-size:25px;
+    font-weight:800;
+}
+
+.cartbtn{
+    background:#25D366;
+    border:0;
+    color:white;
+    padding:11px 15px;
+    border-radius:10px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+main{
+    max-width:1100px;
+    margin:20px auto;
+    padding:0 14px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:
+        repeat(auto-fill,minmax(190px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:white;
+    border-radius:14px;
+    padding:12px;
+    box-shadow:0 2px 10px #00000012;
+}
+
+.pic{
+    width:100%;
+    height:160px;
+    object-fit:cover;
+    border-radius:10px;
+    background:#eee;
+}
+
+.price{
+    font-size:20px;
+    font-weight:800;
+    margin:8px 0;
+}
+
+.sold{
+    color:#6b7280;
+    font-weight:700;
+    padding:10px 0;
+}
+
+.add{
+    width:100%;
+    border:0;
+    background:#111827;
+    color:white;
+    padding:10px;
+    border-radius:9px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.cart{
+    position:fixed;
+    right:0;
+    top:0;
+    width:min(420px,100%);
+    height:100%;
+    background:white;
+    z-index:20;
+    box-shadow:-5px 0 20px #0003;
+    padding:20px;
+    overflow:auto;
+    transform:translateX(100%);
+    transition:.2s;
+}
+
+.cart.open{
+    transform:translateX(0);
+}
+
+input,
+textarea{
+    width:100%;
+    padding:11px;
+    border:1px solid #d1d5db;
+    border-radius:9px;
+    margin:5px 0 10px;
+}
+
+.close{
+    float:right;
+    border:0;
+    background:#eee;
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer;
+}
+
+.continue{
+    width:100%;
+    border:0;
+    background:#111827;
+    color:white;
+    padding:12px;
+    border-radius:9px;
+    font-weight:700;
+    margin:10px 0;
+    cursor:pointer;
+}
+
+.checkout{
+    background:#25D366;
+    color:white;
+    border:0;
+    width:100%;
+    padding:13px;
+    border-radius:10px;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.qty button{
+    padding:3px 9px;
+    border:1px solid #ddd;
+    background:#fff;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<div class="head">
+
+<div class="logo">
+ItaniTrading
+</div>
+
+<button
+class="cartbtn"
+onclick="toggleCart()">
+
+🛒 Cart (<span id="count">0</span>)
+
+</button>
+
+</div>
+
+</header>
+
+
+<main>
+
+<h1>
+Order from ItaniTrading
+</h1>
+
+<p>
+Choose your products and send your order.
+</p>
+
+<div
+id="products"
+class="grid">
+</div>
+
+</main>
+
+
+<aside
+id="cart"
+class="cart">
+
+<button
+class="close"
+onclick="continueShopping()">
+
+✕
+
+</button>
+
+<h2>
+Your Order
+</h2>
+
+<div id="cartItems">
+</div>
+
+<h3>
+Total: $
+<span id="total">0.00</span>
+</h3>
+
+
+<input
+id="customer"
+placeholder="Your name">
+
+
+<input
+id="phone"
+placeholder="Phone number">
+
+
+<textarea
+id="notes"
+placeholder="Notes (optional)">
+</textarea>
+
+
+<button
+class="continue"
+onclick="continueShopping()">
+
+🛍️ Continue Shopping
+
+</button>
+
+
+<button
+class="checkout"
+onclick="placeOrder()">
+
+📲 Place Order on WhatsApp
+
+</button>
+
+
+<p id="status">
+</p>
+
+</aside>
+
+
 <script>
 
 let products = [];
+
 let cart = [];
 
-async function load() {
-    try {
-        const r = await fetch("/api/products");
-        products = await r.json();
+
+async function load(){
+
+    try{
+
+        const r =
+            await fetch("/api/products");
+
+        products =
+            await r.json();
+
         render();
-    } catch (e) {
-        document.getElementById("products").innerHTML =
+
+    }catch(e){
+
+        document.getElementById(
+            "products"
+        ).innerHTML =
             "<p>Could not load products.</p>";
     }
 }
 
 
-function render() {
+function render(){
 
-    document.getElementById("products").innerHTML =
-        products.map(p => `
+    document.getElementById(
+        "products"
+    ).innerHTML =
 
-            <div class="card">
+    products.map(p => `
 
-                ${
-                    p.image
-                    ?
-                    `<img class="pic"
-                         src="${p.image}"
-                         alt="${esc(p.name)}">`
-                    :
-                    `<div class="pic"
-                         style="display:flex;
-                                align-items:center;
-                                justify-content:center;">
-                        No image
-                    </div>`
-                }
+        <div class="card">
 
-                <h3>${esc(p.name)}</h3>
+            ${
+                p.image
 
-                <div class="price">
-                    $${Number(p.price).toFixed(2)}
-                </div>
+                ?
 
-                ${
-                    p.available
-                    ?
-                    `<button
-                        class="add"
-                        onclick="add('${p.id}')">
-                        Add to Order
-                    </button>`
-                    :
-                    `<div class="sold">
-                        🔴 Sold Out
-                    </div>`
-                }
+                `<img
+                    class="pic"
+                    src="${p.image}"
+                    alt="${esc(p.name)}">`
 
+                :
+
+                `<div
+                    class="pic"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    ">
+                    No image
+                </div>`
+            }
+
+            <h3>
+                ${esc(p.name)}
+            </h3>
+
+            <div class="price">
+                $${Number(p.price).toFixed(2)}
             </div>
 
-        `).join("");
+            ${
+                p.available
+
+                ?
+
+                `<button
+                    class="add"
+                    onclick="add('${p.id}')">
+
+                    Add to Order
+
+                </button>`
+
+                :
+
+                `<div class="sold">
+                    🔴 Sold Out
+                </div>`
+            }
+
+        </div>
+
+    `).join("");
 
     renderCart();
 }
 
 
-function add(id) {
+function add(id){
 
-    const p = products.find(x => String(x.id) === String(id));
+    const p =
+        products.find(
+            x => String(x.id) === String(id)
+        );
 
-    if (!p || !p.available) return;
+    if(!p || !p.available){
+        return;
+    }
 
-    const x = cart.find(
-        x => String(x.id) === String(id)
-    );
+    const x =
+        cart.find(
+            x => String(x.id) === String(id)
+        );
 
-    if (x) {
+    if(x){
+
         x.quantity++;
-    } else {
+
+    }else{
+
         cart.push({
             ...p,
-            quantity: 1
+            quantity:1
         });
+
     }
 
     renderCart();
-    toggleCart();
+
+    /*
+    The cart stays closed so the customer
+    can add several products directly.
+    */
 }
 
 
-function change(id, d) {
+function change(id,d){
 
-    const x = cart.find(
-        x => String(x.id) === String(id)
-    );
+    const x =
+        cart.find(
+            x => String(x.id) === String(id)
+        );
 
-    if (!x) return;
+    if(!x){
+        return;
+    }
 
     x.quantity += d;
 
-    if (x.quantity <= 0) {
-        cart = cart.filter(
-            x => String(x.id) !== String(id)
-        );
+    if(x.quantity <= 0){
+
+        cart =
+            cart.filter(
+                x => String(x.id) !== String(id)
+            );
     }
 
     renderCart();
 }
 
 
-function renderCart() {
+function renderCart(){
 
     const count =
         cart.reduce(
-            (s, x) => s + x.quantity,
+            (s,x) => s + x.quantity,
             0
         );
 
-    document.getElementById("count").textContent =
-        count;
+    document.getElementById(
+        "count"
+    ).textContent = count;
 
 
     const total =
         cart.reduce(
-            (s, x) =>
-                s + Number(x.price) * x.quantity,
+            (s,x) =>
+                s +
+                Number(x.price) *
+                x.quantity,
             0
         );
 
-    document.getElementById("total").textContent =
+    document.getElementById(
+        "total"
+    ).textContent =
         total.toFixed(2);
 
 
-    document.getElementById("cartItems").innerHTML =
-        cart.length
+    document.getElementById(
+        "cartItems"
+    ).innerHTML =
 
-        ?
+    cart.length
 
-        cart.map(x => `
+    ?
 
-            <div style="
-                padding:10px 0;
-                border-bottom:1px solid #eee
-            ">
+    cart.map(x => `
 
-                <b>${esc(x.name)}</b>
+        <div
+        style="
+        padding:10px 0;
+        border-bottom:1px solid #eee;
+        ">
 
-                <div class="qty">
+            <b>
+                ${esc(x.name)}
+            </b>
 
-                    <button
-                        onclick="change('${x.id}',-1)">
-                        −
-                    </button>
+            <div class="qty">
 
-                    ${x.quantity}
+                <button
+                onclick="change('${x.id}',-1)">
+                −
+                </button>
 
-                    <button
-                        onclick="change('${x.id}',1)">
-                        +
-                    </button>
+                ${x.quantity}
 
-                    —
-                    $${(
-                        Number(x.price) *
-                        x.quantity
-                    ).toFixed(2)}
+                <button
+                onclick="change('${x.id}',1)">
+                +
+                </button>
 
-                </div>
+                —
+                $${(
+                    Number(x.price) *
+                    x.quantity
+                ).toFixed(2)}
 
             </div>
 
-        `).join("")
+        </div>
 
-        :
+    `).join("")
 
-        "Your cart is empty.";
+    :
+
+    "Your cart is empty.";
 }
 
 
-function toggleCart() {
+function toggleCart(){
 
     document
         .getElementById("cart")
@@ -206,34 +540,49 @@ function toggleCart() {
 }
 
 
-async function placeOrder() {
+function continueShopping(){
 
-    if (!cart.length) {
-        alert("Add products first.");
+    document
+        .getElementById("cart")
+        .classList
+        .remove("open");
+}
+
+
+async function placeOrder(){
+
+    if(!cart.length){
+
+        alert(
+            "Add products first."
+        );
+
         return;
     }
 
 
     const customer =
         document
-            .getElementById("customer")
-            .value
-            .trim();
+        .getElementById("customer")
+        .value
+        .trim();
+
 
     const phone =
         document
-            .getElementById("phone")
-            .value
-            .trim();
+        .getElementById("phone")
+        .value
+        .trim();
+
 
     const notes =
         document
-            .getElementById("notes")
-            .value
-            .trim();
+        .getElementById("notes")
+        .value
+        .trim();
 
 
-    if (!customer || !phone) {
+    if(!customer || !phone){
 
         alert(
             "Please enter your name and phone number."
@@ -245,7 +594,7 @@ async function placeOrder() {
 
     const total =
         cart.reduce(
-            (s, x) =>
+            (s,x) =>
                 s +
                 Number(x.price) *
                 x.quantity,
@@ -253,45 +602,52 @@ async function placeOrder() {
         );
 
 
-    try {
+    try{
 
-        const r = await fetch("/api/orders", {
+        const r =
+            await fetch(
+                "/api/orders",
+                {
+                    method:"POST",
 
-            method: "POST",
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
 
-            headers: {
-                "Content-Type": "application/json"
-            },
+                    body:JSON.stringify({
 
-            body: JSON.stringify({
+                        customer:customer,
 
-                customer: customer,
+                        phone:phone,
 
-                phone: phone,
+                        products:
+                            cart.map(x => ({
 
-                products: cart.map(x => ({
+                                name:x.name,
 
-                    name: x.name,
+                                quantity:
+                                    x.quantity,
 
-                    quantity: x.quantity,
+                                price:
+                                    Number(x.price)
 
-                    price: Number(x.price)
+                            })),
 
-                })),
+                        total:total,
 
-                total: total,
+                        notes:notes
 
-                notes: notes
-
-            })
-
-        });
-
-
-        const data = await r.json();
+                    })
+                }
+            );
 
 
-        if (!r.ok) {
+        const data =
+            await r.json();
+
+
+        if(!r.ok){
 
             alert(
                 data.error ||
@@ -303,23 +659,29 @@ async function placeOrder() {
 
 
         const msg =
+
             `📦 *New Order - ItaniTrading*%0A%0A` +
 
             `👤 *Customer:* ` +
+
             encodeURIComponent(customer) +
 
             `%0A📞 *Phone:* ` +
+
             encodeURIComponent(phone) +
 
             `%0A%0A*Products:*%0A` +
 
             cart.map(x =>
-                `• ${encodeURIComponent(x.name)} ` +
-                `x${x.quantity} - $` +
+
+                `• ` +
+                encodeURIComponent(x.name) +
+                ` x${x.quantity} - $` +
                 (
                     Number(x.price) *
                     x.quantity
                 ).toFixed(2)
+
             ).join("%0A") +
 
             `%0A%0A💰 *Total:* $` +
@@ -327,21 +689,30 @@ async function placeOrder() {
 
             (
                 notes
+
                 ?
+
                 `%0A📝 *Notes:* ` +
                 encodeURIComponent(notes)
+
                 :
+
                 ""
             );
 
 
-        if (data.whatsappNumber) {
+        if(data.whatsappNumber){
 
             window.open(
                 `https://wa.me/${data.whatsappNumber}?text=${msg}`,
                 "_blank"
             );
 
+        }else{
+
+            alert(
+                "Order saved, but WhatsApp number is not configured."
+            );
         }
 
 
@@ -349,11 +720,12 @@ async function placeOrder() {
 
         renderCart();
 
-        document.getElementById("status").textContent =
+        document.getElementById(
+            "status"
+        ).textContent =
             "Order saved successfully.";
 
-
-    } catch (e) {
+    }catch(e){
 
         alert(
             "Could not connect to the server."
@@ -362,17 +734,17 @@ async function placeOrder() {
 }
 
 
-function esc(s) {
+function esc(s){
 
     return String(s).replace(
         /[&<>"']/g,
 
         m => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;"
+            "&":"&amp;",
+            "<":"&lt;",
+            ">":"&gt;",
+            '"':"&quot;",
+            "'":"&#039;"
         }[m])
     );
 }
@@ -381,3 +753,7 @@ function esc(s) {
 load();
 
 </script>
+
+</body>
+
+</html>
