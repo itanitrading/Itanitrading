@@ -225,8 +225,7 @@ app.post("/api/orders", (req, res) => {
 
     order,
 
-    whatsappNumber:
-      process.env.WHATSAPP_NUMBER || ""
+    whatsappNumber: "81738069"
 
   });
 
