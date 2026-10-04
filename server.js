@@ -98,59 +98,51 @@ app.get("/api/products", (req, res) => {
   res.json(products);
 });
 
-app.post("/api/products", requireAdmin, upload.single("image"), (req, res) => {
-  const { name, price, available } = req.body;
+app.post(
+  "/api/products",
+  requireAdmin,
+  upload.single("image"),
+  (req, res) => {
 
-  if (!name || price === undefined) {
-    return res.status(400).json({
-      error: "Product name and price are required"
-    });
+    console.log("PRODUCT BODY:", req.body);
+    console.log("UPLOADED FILE:", req.file);
+
+    const { name, price, available } = req.body;
+
+    if (!name || price === undefined) {
+      return res.status(400).json({
+        error: "Product name and price are required"
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: "No picture was uploaded"
+      });
+    }
+
+    const product = {
+      id: crypto.randomUUID(),
+
+      name: name,
+
+      price: Number(price),
+
+      available: available !== "false",
+
+      image: `/uploads/${req.file.filename}`,
+
+      createdAt: new Date().toISOString()
+    };
+
+    products.push(product);
+
+    console.log("NEW PRODUCT:", product);
+
+    res.json(product);
   }
+);
 
-  const product = {
-    id: crypto.randomUUID(),
-    name,
-    price: Number(price),
-    available: available !== "false",
-    image: req.file
-      ? `/uploads/${req.file.filename}`
-      : "",
-    createdAt: new Date().toISOString()
-  };
-
-  products.push(product);
-
-  res.json(product);
-});
-
-app.patch("/api/products/:id", requireAdmin, upload.single("image"), (req, res) => {
-  const product = products.find(p => p.id === req.params.id);
-
-  if (!product) {
-    return res.status(404).json({
-      error: "Product not found"
-    });
-  }
-
-  if (req.body.name !== undefined) {
-    product.name = req.body.name;
-  }
-
-  if (req.body.price !== undefined) {
-    product.price = Number(req.body.price);
-  }
-
-  if (req.body.available !== undefined) {
-    product.available =
-      req.body.available === true ||
-      req.body.available === "true";
-  }
-
-  if (req.file) {
-    product.image = `/uploads/${req.file.filename}`;
-  }
-
-  res.json(product);
 });
 
 app.delete("/api/products/:id", requireAdmin, (req, res) => {
