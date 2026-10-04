@@ -176,31 +176,62 @@ app.get("/api/orders", requireAdmin, (req, res) => {
 });
 
 app.post("/api/orders", (req, res) => {
-  const { customer, phone, address, items, total } = req.body;
 
-  if (!customer || !items || !items.length) {
+  const {
+    customer,
+    phone,
+    address,
+    items,
+    products,
+    total,
+    notes
+  } = req.body;
+
+  const orderItems = items || products || [];
+
+  if (!customer || !orderItems.length) {
+
     return res.status(400).json({
       error: "Customer and order items are required"
     });
+
   }
 
   const order = {
+
     id: crypto.randomUUID(),
+
     customer,
+
     phone: phone || "",
+
     address: address || "",
-    items,
+
+    items: orderItems,
+
     total: Number(total || 0),
+
+    notes: notes || "",
+
     createdAt: new Date().toISOString()
+
   };
 
   orders.push(order);
 
   res.json({
+
     success: true,
-    order
+
+    order,
+
+    whatsappNumber:
+      process.env.WHATSAPP_NUMBER || ""
+
   });
+
 });
+
 
 // ==================== PAGES ====================
 
