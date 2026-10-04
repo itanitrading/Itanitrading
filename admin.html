@@ -110,52 +110,46 @@ Add Product
 
 let token = localStorage.getItem("itanitrading_admin_token");
 
+async function check() {
+    try {
+        const r = await fetch("/api/admin/me", {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
 
-async function check(){
+        if (r.ok) {
+            const x = await r.json();
 
-try{
+            if (x.loggedIn) {
+                document.getElementById("login").style.display = "none";
+                document.getElementById("app").style.display = "block";
 
-let r = await fetch("/api/admin/me",{
-headers:{
-"Authorization":"Bearer "+token
-}
-});
+                loadProducts();
+                loadOrders();
+                return;
+            }
+        }
 
-if(r.ok){
+        localStorage.removeItem("itanitrading_admin_token");
 
-let x = await r.json();
+        document.getElementById("login").style.display = "block";
+        document.getElementById("app").style.display = "none";
 
-if(x.loggedIn){
-
-document.getElementById("login").style.display="none";
-document.getElementById("app").style.display="block";
-
-loadProducts();
-loadOrders();
-
-return;
-
-}
-}
-
-localStorage.removeItem("itanitrading_admin_token");
-
-document.getElementById("login").style.display="block";
-document.getElementById("app").style.display="none";
-
-}catch(e){
-
-document.getElementById("loginMsg").textContent="Server connection error.";
-
-}
-
+    } catch (e) {
+        document.getElementById("loginMsg").textContent =
+            "Server connection error.";
+    }
 }
 
 
-async function login(){
+async function login() {
 
-    const password = document.getElementById("password").value;
-    const msg = document.getElementById("loginMsg");
+    const password =
+        document.getElementById("password").value;
+
+    const msg =
+        document.getElementById("loginMsg");
 
     msg.textContent = "Logging in...";
 
@@ -163,9 +157,11 @@ async function login(){
 
         const r = await fetch("/api/admin/login", {
             method: "POST",
-        headers: {
+
+            headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
                 password: password
             })
@@ -174,7 +170,8 @@ async function login(){
         const x = await r.json();
 
         if (!r.ok) {
-            msg.textContent = x.error || "Login failed.";
+            msg.textContent =
+                x.error || "Login failed.";
             return;
         }
 
@@ -183,344 +180,389 @@ async function login(){
             x.token
         );
 
-        window.location.href = "/admin";
+        document.getElementById("login").style.display = "none";
+        document.getElementById("app").style.display = "block";
+
+        token = x.token;
+
+        loadProducts();
+        loadOrders();
 
     } catch (e) {
 
-        msg.textContent = "Server connection error.";
-
+        msg.textContent =
+            "Server connection error.";
     }
-  }
-  
-
-
-async function logout(){
-
-await fetch("/api/admin/logout",{
-method:"POST",
-headers:{
-"Authorization":"Bearer "+token
 }
-});
 
-localStorage.removeItem("itanitrading_admin_token");
 
-location.reload();
+async function logout() {
 
+    try {
+
+        await fetch("/api/admin/logout", {
+            method: "POST",
+
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
+
+    } catch (e) {}
+
+    localStorage.removeItem(
+        "itanitrading_admin_token"
+    );
+
+    location.reload();
 }
 
 
 /* ================= PRODUCTS ================= */
 
-async function loadProducts(){
+async function loadProducts() {
 
-let r=await fetch("/api/products");
+    try {
 
-let ps=await r.json();
+        const r = await fetch("/api/products");
 
-if(!ps.length){
+        const ps = await r.json();
 
-document.getElementById("products").innerHTML=
-"<p>No products yet.</p>";
+        const container =
+            document.getElementById("products");
 
-return;
+        if (!ps.length) {
 
-}
+            container.innerHTML =
+                "<p>No products yet.</p>";
 
-document.getElementById("products").innerHTML=
+            return;
+        }
 
-ps.map(p=>`
+        container.innerHTML = ps.map(p => `
 
-<div class="product">
+            <div class="product">
 
-${
-p.image
-?
-`<img src="${p.image}" alt="${esc(p.name)}">`
-:
-`<div style="height:140px;background:#eee;display:flex;align-items:center;justify-content:center;border-radius:8px">
-No picture
-</div>`
-}
+                ${
+                    p.image
+                    ?
+                    `<img src="${p.image}" alt="${esc(p.name)}">`
+                    :
+                    `<div style="
+                        height:140px;
+                        background:#eee;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        border-radius:8px;
+                    ">
+                        No picture
+                    </div>`
+                }
 
-<br>
+                <br>
 
-<b>${esc(p.name)}</b>
+                <b>${esc(p.name)}</b>
 
-<p>
-Price:
-$<input
-style="width:80px"
-id="price-${p.id}"
-value="${p.price}">
-</p>
+                <p>
+                    Price:
+                    $
+                    <input
+                        style="width:80px"
+                        id="price-${p.id}"
+                        value="${p.price}"
+                    >
+                </p>
 
-<p class="status">
-${p.available ? "🟢 Available" : "🔴 Sold Out"}
-</p>
+                <p class="status">
+                    ${
+                        p.available
+                        ? "🟢 Available"
+                        : "🔴 Sold Out"
+                    }
+                </p>
 
-<button
-class="green"
-onclick="save('${p.id}')">
-Save Price
-</button>
+                <button
+                    class="green"
+                    onclick="save('${p.id}')">
+                    Save Price
+                </button>
 
-<button
-onclick="toggle('${p.id}', ${p.available})">
-${p.available ? "🔴 Mark Sold Out" : "🟢 Mark Available"}
-</button>
+                <button
+                    onclick="toggle('${p.id}', ${p.available})">
+                    ${
+                        p.available
+                        ? "🔴 Mark Sold Out"
+                        : "🟢 Mark Available"
+                    }
+                </button>
 
-<button
-class="red"
-onclick="del('${p.id}')">
-🗑️ Delete
-</button>
+                <button
+                    class="red"
+                    onclick="del('${p.id}')">
+                    🗑️ Delete
+                </button>
 
-</div>
+            </div>
 
-`).join("");
+        `).join("");
 
+    } catch (e) {
+
+        document.getElementById("products").innerHTML =
+            "<p>Could not load products.</p>";
+    }
 }
 
 
 /* ================= SAVE PRICE ================= */
 
-async function save(id){
+async function save(id) {
 
-let price=document.getElementById("price-"+id).value;
+    const price =
+        document.getElementById("price-" + id).value;
 
-let r=await fetch("/api/products/"+id,{
+    const r = await fetch("/api/products/" + id, {
 
-method:"PATCH",
+        method: "PATCH",
 
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer "+token
-},
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+        },
 
-body:JSON.stringify({
-price:Number(price)
-})
+        body: JSON.stringify({
+            price: Number(price)
+        })
+    });
 
-});
+    if (!r.ok) {
 
-if(!r.ok){
+        alert("Could not save the price.");
+        return;
+    }
 
-alert("Could not save the price.");
-
-return;
-
-}
-
-loadProducts();
-
+    loadProducts();
 }
 
 
 /* ================= AVAILABLE / SOLD OUT ================= */
 
-async function toggle(id,status){
+async function toggle(id, status) {
 
-let r=await fetch("/api/products/"+id,{
+    const r = await fetch("/api/products/" + id, {
 
-method:"PATCH",
+        method: "PATCH",
 
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer "+token
-},
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+        },
 
-body:JSON.stringify({
-available:!status
-})
+        body: JSON.stringify({
+            available: !status
+        })
+    });
 
-});
+    if (!r.ok) {
 
-if(!r.ok){
+        alert("Could not change product availability.");
+        return;
+    }
 
-alert("Could not change product availability.");
-
-return;
-
-}
-
-loadProducts();
-
+    loadProducts();
 }
 
 
 /* ================= DELETE ================= */
 
-async function del(id){
+async function del(id) {
 
-if(!confirm("Delete this product?")) return;
+    if (!confirm("Delete this product?")) {
+        return;
+    }
 
-let r=await fetch("/api/products/"+id,{
+    const r = await fetch("/api/products/" + id, {
 
-method:"DELETE",
+        method: "DELETE",
 
-headers:{
-"Authorization":"Bearer "+token
-}
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
 
-});
+    if (!r.ok) {
 
-if(!r.ok){
+        alert("Could not delete product.");
+        return;
+    }
 
-alert("Could not delete product.");
-
-return;
-
-}
-
-loadProducts();
-
+    loadProducts();
 }
 
 
 /* ================= ADD PRODUCT ================= */
 
-document.getElementById("form").onsubmit=async e=>{
+document.getElementById("form").onsubmit = async e => {
 
-e.preventDefault();
+    e.preventDefault();
 
-let fd=new FormData(e.target);
+    const fd = new FormData(e.target);
 
-/*
-The checkbox sends "on" when checked.
-The server expects anything except "false"
-to mean available.
-*/
+    fd.set(
+        "available",
+        e.target.available.checked
+            ? "true"
+            : "false"
+    );
 
-fd.set(
-"available",
-e.target.available.checked ? "true" : "false"
-);
+    const r = await fetch("/api/products", {
 
-let r=await fetch("/api/products",{
+        method: "POST",
 
-method:"POST",
+        headers: {
+            "Authorization": "Bearer " + token
+        },
 
-headers:{
-"Authorization":"Bearer "+token
-},
+        body: fd
+    });
 
-body:fd
+    if (!r.ok) {
 
-});
+        const error =
+            await r.json().catch(() => ({}));
 
-if(!r.ok){
+        alert(
+            error.error ||
+            "Could not add product."
+        );
 
-let error=await r.json().catch(()=>({}));
+        return;
+    }
 
-alert(error.error || "Could not add product.");
+    e.target.reset();
 
-return;
+    e.target.available.checked = true;
 
-}
-
-e.target.reset();
-
-e.target.available.checked=true;
-
-loadProducts();
-
+    loadProducts();
 };
 
 
 /* ================= ORDERS ================= */
 
-async function loadOrders(){
+async function loadOrders() {
 
-let r=await fetch("/api/orders",{
+    try {
 
-headers:{
-"Authorization":"Bearer "+token
-}
+        const r = await fetch("/api/orders", {
 
-});
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
 
-if(!r.ok) return;
+        if (!r.ok) {
+            return;
+        }
 
-let os=await r.json();
+        const os = await r.json();
 
-document.getElementById("orders").innerHTML=
+        document.getElementById("orders").innerHTML =
 
-os.length?
+            os.length
 
-os.map(o=>`
+            ?
 
-<div class="order">
+            os.map(o => `
 
-<b>👤 ${esc(o.customer)}</b>
+                <div class="order">
 
-—
+                    <b>
+                        👤 ${esc(o.customer)}
+                    </b>
 
-${esc(o.phone || "")}
+                    — ${esc(o.phone || "")}
 
-<br>
+                    <br>
 
-<small>
-${new Date(o.createdAt).toLocaleString()}
-</small>
+                    <small>
+                        ${new Date(o.createdAt).toLocaleString()}
+                    </small>
 
-<ul>
+                    <ul>
 
-${
-(o.items || o.products || []).map(p=>`
+                        ${
+                            (o.items || o.products || [])
+                            .map(p => `
 
-<li>
-${esc(p.name)}
-x${p.quantity}
-—
-$${(Number(p.price)*Number(p.quantity)).toFixed(2)}
-</li>
+                                <li>
 
-`).join("")
-}
+                                    ${esc(p.name)}
 
-</ul>
+                                    x${p.quantity}
 
-<b>
-Total: $${Number(o.total).toFixed(2)}
-</b>
+                                    —
 
-<p>
-📝 ${esc(o.notes || "No notes")}
-</p>
+                                    $${(
+                                        Number(p.price) *
+                                        Number(p.quantity)
+                                    ).toFixed(2)}
 
-</div>
+                                </li>
 
-`).join("")
+                            `).join("")
+                        }
 
-:
+                    </ul>
 
-"No orders yet.";
+                    <b>
+                        Total:
+                        $${Number(o.total).toFixed(2)}
+                    </b>
 
+                    <p>
+                        📝
+                        ${esc(o.notes || "No notes")}
+                    </p>
+
+                </div>
+
+            `).join("")
+
+            :
+
+            "No orders yet.";
+
+    } catch (e) {}
 }
 
 
 /* ================= SECURITY ================= */
 
-function esc(s){
+function esc(s) {
 
-return String(s).replace(
-/[&<>"']/g,
-m=>({
-"&":"&amp;",
-"<":"&lt;",
-">":"&gt;",
-'"':"&quot;",
-"'":"&#039;"
-}[m])
-);
+    return String(s).replace(
+        /[&<>"']/g,
 
+        m => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[m])
+    );
 }
 
+
+/* ================= START ================= */
 
 document.getElementById("loginButton").onclick = login;
 
 check();
 
-setInterval(loadOrders,10000);
-  
+setInterval(loadOrders, 10000);
+
+</script>
+
+
